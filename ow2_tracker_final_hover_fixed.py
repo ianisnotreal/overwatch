@@ -16,7 +16,10 @@ MID_BG = "#11212D"
 LIGHT_BG = "#253745"
 FONT_COLOR = "#ffffff"
 MODERN_FONT = ("Segoe UI", 10)
-ICON_DIR = r"C:\Users\User\Desktop\OW2Tracker\Official\hero_icons"
+# Directory containing the hero icon images.  The icons are bundled with the
+# project inside the ``hero_icons`` folder, so build the path relative to this
+# file to ensure it works regardless of where the script is run from.
+ICON_DIR = os.path.join(os.path.dirname(__file__), "hero_icons")
 
 # Globals
 match_log = []
