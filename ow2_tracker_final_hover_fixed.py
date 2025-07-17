@@ -104,17 +104,23 @@ class ScrollableIconMenu(tk.Frame):
         self.values = values
         self.variable = variable
 
+        # Determine a sensible width for the button based on the longest hero
+        # name provided.  "2" extra characters keeps things from feeling
+        # cramped but avoids the excessive padding the old fixed width added.
+        max_len = max((len(h) for h in values), default=0) + 2
         self.button = tk.Button(
             self,
             textvariable=self.variable,
-            width=20,
+            width=max_len,
             relief="raised",
             bg=LIGHT_BG,
             fg=FONT_COLOR,
             font=MODERN_FONT,
             command=self._toggle_menu,
         )
-        self.button.pack(fill=tk.X)
+        # Don't force the button to expand to the full frame width so the menu
+        # remains form fitting to the hero name.
+        self.button.pack()
 
         self.dropdown = None
         self.outside_click = None
@@ -250,7 +256,10 @@ def create_fixed_dropdowns(frame, role_dict, layout):
         combo = ScrollableIconMenu(rframe, heroes, hero_var)
         combo.pack(pady=2)
 
-        show_icon = not (role == "Support" and idx == len(layout) - 1)
+        # Always show an icon label for each dropdown so every role column
+        # aligns consistently.  Previously the final Support dropdown omitted
+        # the icon which caused that column to appear misaligned.
+        show_icon = True
         icon_label = None
         if show_icon:
             icon_label = tk.Label(rframe, bg=DARK_BG)
