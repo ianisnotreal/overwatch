@@ -1,1 +1,1 @@
-{"teammates": {}, "enemies": {}, "matches": 0, "map_stats": {}}
+{"teammates": {"hazard": 1, "ashe": 1, "bastion": 2, "baptiste": 2, "ana": 2, "doomfist": 1, "reaper": 1}, "enemies": {"doomfist": 1, "ashe": 2, "bastion": 2, "ana": 1, "baptiste": 2, "reinhardt": 1, "brigitte": 1}, "matches": 2, "map_stats": {"Circuit Royal": {"teammates": {"hazard": 1, "ashe": 1, "bastion": 2, "baptiste": 2, "ana": 2, "doomfist": 1, "reaper": 1}, "enemies": {"doomfist": 1, "ashe": 2, "bastion": 2, "ana": 1, "baptiste": 2, "reinhardt": 1, "brigitte": 1}}}}
