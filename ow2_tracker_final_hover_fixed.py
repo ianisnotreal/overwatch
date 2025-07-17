@@ -118,6 +118,12 @@ class ScrollableIconMenu(tk.Frame):
             font=MODERN_FONT,
             command=self._toggle_menu,
         )
+        # Calculate an appropriate width for each dropdown item based on the
+        # longest hero name so the menu is only as wide as needed.
+        font_obj = tk.font.Font(font=MODERN_FONT)
+        text_width = max((font_obj.measure(h) for h in values), default=0)
+        # Leave room for the icon (about 40px) and a small padding buffer.
+        self.item_width = text_width + 50
         # Don't force the button to expand to the full frame width so the menu
         # remains form fitting to the hero name.
         self.button.pack()
@@ -168,12 +174,14 @@ class ScrollableIconMenu(tk.Frame):
             # hero names aren't crowded together.
             item_canvas = tk.Canvas(
                 scroll_frame,
-                width=180,
+                width=self.item_width,
                 height=40,
                 highlightthickness=0,
                 bg=LIGHT_BG,
             )
-            rect = item_canvas.create_rectangle(0, 0, 0, 40, fill="#54b3d6", width=0)
+            rect = item_canvas.create_rectangle(
+                0, 0, 0, 40, fill="#54b3d6", width=0
+            )
             if img:
                 # Center the icon vertically within the 40px tall item.
                 item_canvas.create_image(20, 20, image=img)
@@ -190,13 +198,13 @@ class ScrollableIconMenu(tk.Frame):
             )
             item_canvas.image = img
             # Slight padding between items keeps the list from feeling cramped.
-            item_canvas.pack(fill=tk.X, pady=1)
+            item_canvas.pack(pady=1)
 
             anim_flag = {"running": False}
             def on_enter(e, c=item_canvas, r=rect, f=anim_flag):
-                animate_highlight(c, r, 0, 180, anim_flag=f)
+                animate_highlight(c, r, 0, self.item_width, anim_flag=f)
             def on_leave(e, c=item_canvas, r=rect, f=anim_flag):
-                animate_highlight(c, r, 180, 0, anim_flag=f)
+                animate_highlight(c, r, self.item_width, 0, anim_flag=f)
             def on_click(e, h=hero):
                 self._select(h)
 
