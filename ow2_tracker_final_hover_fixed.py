@@ -81,17 +81,16 @@ def save_data():
 def display_stats(teammate_tree, enemy_tree):
     def fill_tree(tree, data):
         tree.delete(*tree.get_children())
-        sorted_data = sorted([(h.title(), f"{(c / total_matches) * 100:.2f}%", c) for h, c in data.items()], key=lambda x: -x[2])
+        if total_matches:
+            sorted_data = sorted(
+                [(h.title(), f"{(c / total_matches) * 100:.2f}%", c) for h, c in data.items()],
+                key=lambda x: -x[2],
+            )
+        else:
+            sorted_data = []
         for row in sorted_data:
             tree.insert("", "end", values=row)
-    fill_tree(teammate_tree, teammate_matches)
-    fill_tree(enemy_tree, enemy_matches)
 
-    def fill_tree(tree, data):
-        tree.delete(*tree.get_children())
-        sorted_data = sorted([(h.title(), f"{(c / total_matches) * 100:.2f}%", c) for h, c in data.items()], key=lambda x: -x[2])
-        for row in sorted_data:
-            tree.insert("", "end", values=row)
     fill_tree(teammate_tree, teammate_matches)
     fill_tree(enemy_tree, enemy_matches)
 
@@ -258,7 +257,13 @@ def submit_match(teammates, enemies, map_var, teammate_tree, enemy_tree):
         json.dump(match_log, f)
     save_data()
     display_stats(teammate_tree, enemy_tree)
-    return frame
+
+    # clear selections to avoid accidental resubmission
+    for var, _, _ in teammates + enemies:
+        var.set("")
+    map_var.set("")
+
+    return None
 
 def reset_stats(teammate_tree, enemy_tree):
     global teammate_matches, enemy_matches, total_matches, map_stats
@@ -266,7 +271,7 @@ def reset_stats(teammate_tree, enemy_tree):
         teammate_matches, enemy_matches, total_matches, map_stats = {}, {}, 0, {}
         save_data()
         display_stats(teammate_tree, enemy_tree)
-    return frame
+    return None
 
 def build_match_entry(parent):
     frame = tk.Frame(parent, bg=DARK_BG)
