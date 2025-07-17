@@ -117,11 +117,11 @@ class ScrollableIconMenu(tk.Frame):
         self.button.pack(fill=tk.X)
 
         self.dropdown = None
+        self.outside_click = None
 
     def _toggle_menu(self):
         if self.dropdown and self.dropdown.winfo_exists():
-            self.dropdown.destroy()
-            self.dropdown = None
+            self._close_menu()
             return
 
         self.dropdown = tk.Toplevel(self)
@@ -156,30 +156,56 @@ class ScrollableIconMenu(tk.Frame):
                 except Exception as e:
                     print(f"⚠️ Error loading image for {hero}: {e}")
 
-            lbl = tk.Label(
-                scroll_frame,
-                text=hero,
-                image=img,
-                compound="left",
-                anchor="w",
-                width=150,
-                bg=LIGHT_BG,
-                fg=FONT_COLOR,
-                font=MODERN_FONT,
-            )
-            lbl.image = img
-            lbl.pack(fill=tk.X)
-            lbl.bind("<Button-1>", lambda e, h=hero: self._select(h))
+            item_canvas = tk.Canvas(scroll_frame, width=150, height=30, highlightthickness=0, bg=LIGHT_BG)
+            rect = item_canvas.create_rectangle(0, 0, 0, 30, fill="#54b3d6", width=0)
+            if img:
+                item_canvas.create_image(15, 15, image=img)
+                text_x = 30
+            else:
+                text_x = 5
+            label = item_canvas.create_text(text_x, 15, anchor="w", text=hero, fill=FONT_COLOR, font=MODERN_FONT)
+            item_canvas.image = img
+            item_canvas.pack(fill=tk.X)
+
+            anim_flag = {"running": False}
+            def on_enter(e, c=item_canvas, r=rect, f=anim_flag):
+                animate_highlight(c, r, 0, 150, anim_flag=f)
+            def on_leave(e, c=item_canvas, r=rect, f=anim_flag):
+                animate_highlight(c, r, 150, 0, anim_flag=f)
+            def on_click(e, h=hero):
+                self._select(h)
+
+            item_canvas.bind("<Enter>", on_enter)
+            item_canvas.bind("<Leave>", on_leave)
+            item_canvas.bind("<Button-1>", on_click)
+            item_canvas.tag_bind(label, "<Enter>", on_enter)
+            item_canvas.tag_bind(label, "<Leave>", on_leave)
+            item_canvas.tag_bind(label, "<Button-1>", on_click)
+
+        root = self.button.winfo_toplevel()
+
+        def outside(event):
+            if self.dropdown and not str(event.widget).startswith(str(self.dropdown)):
+                self._close_menu()
+
+        self.outside_click = root.bind("<Button-1>", outside, add="+")
 
     def _select(self, value):
         self.variable.set(value)
-        if self.dropdown and self.dropdown.winfo_exists():
-            self.dropdown.destroy()
-            self.dropdown = None
+        self._close_menu()
 
     def destroy(self):
         self._select(self.variable.get())
         super().destroy()
+
+    def _close_menu(self):
+        if self.dropdown and self.dropdown.winfo_exists():
+            root = self.button.winfo_toplevel()
+            if self.outside_click:
+                root.unbind("<Button-1>", self.outside_click)
+                self.outside_click = None
+            self.dropdown.destroy()
+            self.dropdown = None
 
 import unicodedata
 import re
@@ -193,7 +219,7 @@ def create_fixed_dropdowns(frame, role_dict, layout):
     """Create dropdowns for hero selection with a scrollable list."""
     dropdowns = []  # list of (StringVar, ScrollableIconMenu, role)
 
-    for role in layout:
+    for idx, role in enumerate(layout):
         rframe = tk.Frame(frame, bg=DARK_BG)
         rframe.pack(side=tk.LEFT, padx=2)
 
@@ -205,10 +231,15 @@ def create_fixed_dropdowns(frame, role_dict, layout):
         combo = ScrollableIconMenu(rframe, heroes, hero_var)
         combo.pack(pady=2)
 
-        icon_label = tk.Label(rframe, bg=DARK_BG)
-        icon_label.pack()
+        show_icon = not (role == "Support" and idx == len(layout) - 1)
+        icon_label = None
+        if show_icon:
+            icon_label = tk.Label(rframe, bg=DARK_BG)
+            icon_label.pack()
 
         def update_icon(*_):
+            if not show_icon:
+                return
             hero = hero_var.get()
             icon_path = os.path.join(ICON_DIR, f"Icon-{hero}.png")
             if os.path.exists(icon_path):
