@@ -152,26 +152,45 @@ class ScrollableIconMenu(tk.Frame):
             if os.path.exists(icon_path):
                 try:
                     original = tk.PhotoImage(file=icon_path)
-                    img = original.subsample(4, 4)
+                    # Scale down the 256x256 hero icons so they fit comfortably
+                    # in the dropdown menu without being cropped.
+                    img = original.subsample(8, 8)
                 except Exception as e:
                     print(f"⚠️ Error loading image for {hero}: {e}")
 
-            item_canvas = tk.Canvas(scroll_frame, width=150, height=30, highlightthickness=0, bg=LIGHT_BG)
-            rect = item_canvas.create_rectangle(0, 0, 0, 30, fill="#54b3d6", width=0)
+            # Give each item a bit more breathing room so the icons and
+            # hero names aren't crowded together.
+            item_canvas = tk.Canvas(
+                scroll_frame,
+                width=180,
+                height=40,
+                highlightthickness=0,
+                bg=LIGHT_BG,
+            )
+            rect = item_canvas.create_rectangle(0, 0, 0, 40, fill="#54b3d6", width=0)
             if img:
-                item_canvas.create_image(15, 15, image=img)
-                text_x = 30
+                # Center the icon vertically within the 40px tall item.
+                item_canvas.create_image(20, 20, image=img)
+                text_x = 40
             else:
-                text_x = 5
-            label = item_canvas.create_text(text_x, 15, anchor="w", text=hero, fill=FONT_COLOR, font=MODERN_FONT)
+                text_x = 10
+            label = item_canvas.create_text(
+                text_x,
+                20,
+                anchor="w",
+                text=hero,
+                fill=FONT_COLOR,
+                font=MODERN_FONT,
+            )
             item_canvas.image = img
-            item_canvas.pack(fill=tk.X)
+            # Slight padding between items keeps the list from feeling cramped.
+            item_canvas.pack(fill=tk.X, pady=1)
 
             anim_flag = {"running": False}
             def on_enter(e, c=item_canvas, r=rect, f=anim_flag):
-                animate_highlight(c, r, 0, 150, anim_flag=f)
+                animate_highlight(c, r, 0, 180, anim_flag=f)
             def on_leave(e, c=item_canvas, r=rect, f=anim_flag):
-                animate_highlight(c, r, 150, 0, anim_flag=f)
+                animate_highlight(c, r, 180, 0, anim_flag=f)
             def on_click(e, h=hero):
                 self._select(h)
 
