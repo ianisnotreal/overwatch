@@ -97,6 +97,91 @@ def display_stats(teammate_tree, enemy_tree):
 
 ICON_CACHE = {}  # add this near top of your file, after constants
 
+class ScrollableIconMenu(tk.Frame):
+    """A custom dropdown widget that displays hero icons with a scrollable list."""
+
+    def __init__(self, parent, values, variable):
+        super().__init__(parent, bg=DARK_BG)
+        self.values = values
+        self.variable = variable
+
+        self.button = tk.Button(
+            self,
+            textvariable=self.variable,
+            width=20,
+            relief="raised",
+            bg=LIGHT_BG,
+            fg=FONT_COLOR,
+            font=MODERN_FONT,
+            command=self._toggle_menu,
+        )
+        self.button.pack(fill=tk.X)
+
+        self.dropdown = None
+
+    def _toggle_menu(self):
+        if self.dropdown and self.dropdown.winfo_exists():
+            self.dropdown.destroy()
+            self.dropdown = None
+            return
+
+        self.dropdown = tk.Toplevel(self)
+        self.dropdown.wm_overrideredirect(True)
+
+        x = self.winfo_rootx()
+        y = self.winfo_rooty() + self.winfo_height()
+        self.dropdown.geometry(f"+{x}+{y}")
+
+        canvas = tk.Canvas(self.dropdown, bg=LIGHT_BG, highlightthickness=0)
+        scrollbar = tk.Scrollbar(self.dropdown, orient="vertical", command=canvas.yview)
+        canvas.configure(yscrollcommand=scrollbar.set, height=150)
+
+        scroll_frame = tk.Frame(canvas, bg=LIGHT_BG)
+        canvas.create_window((0, 0), window=scroll_frame, anchor="nw")
+
+        def on_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        scroll_frame.bind("<Configure>", on_configure)
+
+        canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        for hero in self.values:
+            icon_path = os.path.join(ICON_DIR, f"Icon-{hero}.png")
+            img = None
+            if os.path.exists(icon_path):
+                try:
+                    original = tk.PhotoImage(file=icon_path)
+                    img = original.subsample(4, 4)
+                except Exception as e:
+                    print(f"⚠️ Error loading image for {hero}: {e}")
+
+            lbl = tk.Label(
+                scroll_frame,
+                text=hero,
+                image=img,
+                compound="left",
+                anchor="w",
+                width=150,
+                bg=LIGHT_BG,
+                fg=FONT_COLOR,
+                font=MODERN_FONT,
+            )
+            lbl.image = img
+            lbl.pack(fill=tk.X)
+            lbl.bind("<Button-1>", lambda e, h=hero: self._select(h))
+
+    def _select(self, value):
+        self.variable.set(value)
+        if self.dropdown and self.dropdown.winfo_exists():
+            self.dropdown.destroy()
+            self.dropdown = None
+
+    def destroy(self):
+        self._select(self.variable.get())
+        super().destroy()
+
 import unicodedata
 import re
 
@@ -107,7 +192,7 @@ def sanitize_filename(name):
 
 def create_fixed_dropdowns(frame, role_dict, layout):
     """Create dropdowns for hero selection with a scrollable list."""
-    dropdowns = []  # list of (StringVar, Combobox, role)
+    dropdowns = []  # list of (StringVar, ScrollableIconMenu, role)
 
     for role in layout:
         rframe = tk.Frame(frame, bg=DARK_BG)
@@ -118,13 +203,7 @@ def create_fixed_dropdowns(frame, role_dict, layout):
         hero_var = tk.StringVar(value="")
 
         heroes = role_dict[role]
-        combo = ttk.Combobox(
-            rframe,
-            values=heroes,
-            textvariable=hero_var,
-            width=20,
-            state="readonly",
-        )
+        combo = ScrollableIconMenu(rframe, heroes, hero_var)
         combo.pack(pady=2)
 
         icon_label = tk.Label(rframe, bg=DARK_BG)
