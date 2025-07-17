@@ -106,7 +106,8 @@ def sanitize_filename(name):
     return f"Icon-{name}.png"
 
 def create_fixed_dropdowns(frame, role_dict, layout):
-    dropdowns = []
+    """Create dropdowns for hero selection with a scrollable list."""
+    dropdowns = []  # list of (StringVar, Combobox, role)
 
     for role in layout:
         rframe = tk.Frame(frame, bg=DARK_BG)
@@ -114,49 +115,47 @@ def create_fixed_dropdowns(frame, role_dict, layout):
 
         tk.Label(rframe, text=role, bg=DARK_BG, fg=FONT_COLOR).pack()
 
-        hero_var = tk.StringVar()
-        hero_var.set("")  # Start with no selection
+        hero_var = tk.StringVar(value="")
 
-        button = tk.Menubutton(rframe, textvariable=hero_var, bg=LIGHT_BG, fg=FONT_COLOR,
-                               font=MODERN_FONT, relief="raised", width=20)
-        menu = tk.Menu(button, tearoff=0, bg=LIGHT_BG, fg=FONT_COLOR)
-        button.config(menu=menu)
+        heroes = role_dict[role]
+        combo = ttk.Combobox(
+            rframe,
+            values=heroes,
+            textvariable=hero_var,
+            width=20,
+            state="readonly",
+        )
+        combo.pack(pady=2)
 
-        # Local cache specific to this dropdown
-        button.image_refs = {}
+        icon_label = tk.Label(rframe, bg=DARK_BG)
+        icon_label.pack()
 
-        for hero in role_dict[role]:
+        def update_icon(*_):
+            hero = hero_var.get()
             icon_path = os.path.join(ICON_DIR, f"Icon-{hero}.png")
-
-            icon = None
             if os.path.exists(icon_path):
                 try:
                     original = tk.PhotoImage(file=icon_path)
                     icon = original.subsample(4, 4)
+                    icon_label.config(image=icon)
+                    icon_label.image = icon
                 except Exception as e:
                     print(f"⚠️ Error loading image for {hero}: {e}")
-
-            if icon:
-                button.image_refs[hero] = icon
-                menu.add_radiobutton(
-                    label=hero,
-                    image=icon,
-                    compound="left",
-                    variable=hero_var,
-                    value=hero
-                )
+                    icon_label.config(image="")
+                    icon_label.image = None
             else:
-                menu.add_radiobutton(label=hero, variable=hero_var, value=hero)
+                icon_label.config(image="")
+                icon_label.image = None
 
-        button.pack(pady=2)
-        dropdowns.append(hero_var)
+        hero_var.trace_add("write", update_icon)
+        dropdowns.append((hero_var, combo, role))
 
     return dropdowns
 
 def submit_match(teammates, enemies, map_var, teammate_tree, enemy_tree):
     global total_matches, match_log
-    t = [d.get().strip() for d in teammates]
-    e = [d.get().strip() for d in enemies]
+    t = [d[0].get().strip() for d in teammates]
+    e = [d[0].get().strip() for d in enemies]
     m = map_var.get()
     if len(set(t)) != 5 or len(set(e)) != 5 or "" in t + e or not m:
         messagebox.showerror("Error", "5 unique teammates, 5 enemies, and a map are required.")
@@ -244,9 +243,9 @@ def build_match_entry(parent):
         entry = match_log[history_index[0]]
         map_var.set(entry["map"])
         for i, hero in enumerate(entry["teammates"]):
-            teammates[i].set(hero)
+            teammates[i][0].set(hero)
         for i, hero in enumerate(entry["enemies"]):
-            enemies[i].set(hero)
+            enemies[i][0].set(hero)
 
     make_btn("Submit", lambda: submit_match(teammates, enemies, map_var, teammate_tree, enemy_tree), MID_BG)
     make_btn("Reset Stats", lambda: reset_stats(teammate_tree, enemy_tree))
@@ -259,6 +258,10 @@ def build_match_entry(parent):
             HEROES_BY_ROLE[role].append(name)
             with open(HEROES_FILE, "w") as f:
                 json.dump(HEROES_BY_ROLE, f)
+            # update combobox values for the affected role
+            for var, combo, r in teammates + enemies:
+                if r == role:
+                    combo["values"] = HEROES_BY_ROLE[role]
 
     def add_new_map():
         new_map = simpledialog.askstring("Map Name", "Enter new map name:")
